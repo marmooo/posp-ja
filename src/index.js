@@ -13,6 +13,7 @@ let problemCount = 0;
 let correctCount = 0;
 let incorrectCount = 0;
 let mistaken = false;
+let firstRun = true;
 let targetProblems = [];
 let problems = [];
 const audioContext = new AudioContext();
@@ -342,6 +343,7 @@ function setProblemCache() {
 }
 
 function setProblem() {
+  firstRun = false;
   const selectNode = document.getElementById("courseOption");
   const courseNode = selectNode.options[selectNode.selectedIndex];
   const course = courseNode.value;
@@ -416,6 +418,7 @@ function scoring() {
 }
 
 function showAnswer() {
+  if (firstRun) return showSearchingAnswer("名詞");
   const selectNode = document.getElementById("courseOption");
   const courseNode = selectNode.options[selectNode.selectedIndex];
   const course = courseNode.value;
@@ -452,7 +455,9 @@ function showLabelingAnswer() {
     option.selected = true;
     wrapperNode.classList.add("bd-danger");
     if (problemCount <= solvedCount) {
+      answerButton.disabled = true;
       setTimeout(() => {
+        answerButton.disabled = false;
         nextProblem();
       }, 5000);
     }
@@ -473,7 +478,9 @@ function showSearchingAnswer(course) {
       wrapperNode.classList.remove("bg-danger");
     }
   });
+  answerButton.disabled = true;
   setTimeout(() => {
+    answerButton.disabled = false;
     nextProblem();
   }, 5000);
 }
