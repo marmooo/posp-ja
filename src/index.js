@@ -2,7 +2,6 @@ const playPanel = document.getElementById("playPanel");
 const countPanel = document.getElementById("countPanel");
 const scorePanel = document.getElementById("scorePanel");
 const japanese = document.getElementById("japanese");
-const choices = document.getElementById("choices");
 const gameTime = 120;
 let gameTimer;
 // https://dova-s.jp/bgm/play17691.html
@@ -99,14 +98,6 @@ function nextProblem() {
   setProblem();
 }
 
-function shuffle(array) {
-  for (let i = array.length; 1 < i; i--) {
-    const k = Math.floor(Math.random() * i);
-    [array[k], array[i - 1]] = [array[i - 1], array[k]];
-  }
-  return array;
-}
-
 function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
@@ -179,9 +170,70 @@ function setLabelingChoice(morpheme, wrapperNode) {
   wrapperNode.appendChild(posBox);
 }
 
+function mergePOS(course, problem) {
+  if (course != "品詞分解 (大人)") {
+    problem = mergeAdjectiveVerbs(problem);
+  }
+  if (course == "品詞分解 (小学生)") {
+    problem = mergeAuxiliaryVerbs(problem);
+  }
+  return problem;
+}
+
+function mergeAuxiliaryVerbs(problem) {
+  const newProblem = [];
+  let merged = false;
+  problem.forEach((morpheme, i) => {
+    const nextMorpheme = problem[i + 1];
+    if (
+      morpheme.feature == "動詞" &&
+      nextMorpheme &&
+      nextMorpheme.feature == "助動詞"
+    ) {
+      merged = true;
+      morpheme.feature = "動詞";
+      morpheme.surface += nextMorpheme.surface;
+      morpheme.reading += nextMorpheme.reading;
+      newProblem.push(morpheme);
+    } else if (merged) {
+      merged = false;
+    } else {
+      newProblem.push(morpheme);
+    }
+  });
+  return newProblem;
+}
+
+function mergeAdjectiveVerbs(problem) {
+  const newProblem = [];
+  let merged = false;
+  problem.forEach((morpheme, i) => {
+    const nextMorpheme = problem[i + 1];
+    if (
+      morpheme.featureDetails[0] == "形容動詞語幹" &&
+      nextMorpheme &&
+      nextMorpheme.feature == "助動詞"
+    ) {
+      merged = true;
+      morpheme.feature = "形容動詞";
+      morpheme.surface += nextMorpheme.surface;
+      morpheme.reading += nextMorpheme.reading;
+      morpheme.featureDetails = ["*", "*", "*"];
+      morpheme.conjugationForms = nextMorpheme.conjugationForms;
+      newProblem.push(morpheme);
+    } else if (merged) {
+      merged = false;
+    } else {
+      newProblem.push(morpheme);
+    }
+  });
+  return newProblem;
+}
+
 function setLabelingProblem(course) {
   document.getElementById("explanation").textContent = `品詞を選んでください`;
-  const problem = targetProblems[getRandomInt(0, targetProblems.length)];
+  let problem = targetProblems[getRandomInt(0, targetProblems.length)];
+  problem = mergePOS(course, problem);
   const nextProblems = [];
   let choiceCount = 0;
   problem.forEach((morpheme) => {
@@ -197,7 +249,8 @@ function setLabelingProblem(course) {
       case "接頭詞":
       case "連体詞":
       case "助動詞":
-        if (course == "品詞分解 (小学校)") {
+      case "形容動詞":
+        if (course == "品詞分解 (小学生)") {
           wrapperNode.className = "btn btn-light btn-lg m-1 px-2";
           wrapperNode.textContent = morpheme.surface;
         } else {
@@ -276,8 +329,9 @@ function setProblemCache() {
   const courseNode = selectNode.options[selectNode.selectedIndex];
   const course = courseNode.value;
   switch (course) {
-    case "品詞分解 (小学校)":
-    case "品詞分解 (中学校)":
+    case "品詞分解 (小学生)":
+    case "品詞分解 (中学生)":
+    case "品詞分解 (大人)":
       targetProblems = problems;
       break;
     default:
@@ -292,8 +346,9 @@ function setProblem() {
   const courseNode = selectNode.options[selectNode.selectedIndex];
   const course = courseNode.value;
   switch (course) {
-    case "品詞分解 (小学校)":
-    case "品詞分解 (中学校)":
+    case "品詞分解 (小学生)":
+    case "品詞分解 (中学生)":
+    case "品詞分解 (大人)":
       return setLabelingProblem(course);
     default:
       return setSearchingProblem(course);
@@ -365,8 +420,9 @@ function showAnswer() {
   const courseNode = selectNode.options[selectNode.selectedIndex];
   const course = courseNode.value;
   switch (course) {
-    case "品詞分解 (小学校)":
-    case "品詞分解 (中学校)":
+    case "品詞分解 (小学生)":
+    case "品詞分解 (中学生)":
+    case "品詞分解 (大人)":
       return showLabelingAnswer();
     default:
       return showSearchingAnswer(course);
