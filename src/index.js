@@ -5,7 +5,7 @@ const japanese = document.getElementById("japanese");
 const choices = document.getElementById("choices");
 const gameTime = 120;
 let gameTimer;
-// https://dova-s.jp/bgm/play17438.html
+// https://dova-s.jp/bgm/play17691.html
 const bgm = new Audio("mp3/bgm.mp3");
 bgm.volume = 0.1;
 bgm.loop = true;
