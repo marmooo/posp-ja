@@ -3,14 +3,14 @@ const infoPanel = document.getElementById("infoPanel");
 const countPanel = document.getElementById("countPanel");
 const scorePanel = document.getElementById("scorePanel");
 const japanese = document.getElementById("japanese");
-const gameTime = 120;
+const gameTime = 180;
 let gameTimer;
 // https://dova-s.jp/bgm/play17691.html
 const bgm = new Audio("mp3/bgm.mp3");
 bgm.volume = 0.1;
 bgm.loop = true;
 let solvedCount = 0;
-let problemCount = 0;
+let problemCount = 5;
 let correctCount = 0;
 let incorrectCount = 0;
 let mistaken = false;
@@ -91,7 +91,6 @@ async function loadProblems() {
   const response = await fetch(`problems.json`);
   const json = await response.json();
   problems = json;
-  setProblemCache();
 }
 
 function nextProblem() {
@@ -160,23 +159,11 @@ function getFuriganas(morpheme) {
   return result;
 }
 
-function setLabelingChoice(morpheme, wrapperNode) {
-  wrapperNode.className = "btn btn-light btn-lg m-1 px-2 choice";
-  const surfaceNode = document.createElement("div");
-  const html = getFuriganaHTML(morpheme);
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const spans = [...doc.body.childNodes];
-  surfaceNode.replaceChildren(...spans);
-  const posBox = new POSBox(morpheme.feature, wrapperNode);
-  wrapperNode.appendChild(surfaceNode);
-  wrapperNode.appendChild(posBox);
-}
-
 function mergePOS(course, problem) {
-  if (course != "品詞分解 (大人)") {
+  if (course != "大人") {
     problem = mergeAdjectiveVerbs(problem);
   }
-  if (course == "品詞分解 (小学生)") {
+  if (course == "小学生") {
     problem = mergeAuxiliaryVerbs(problem);
   }
   return problem;
@@ -193,10 +180,14 @@ function mergeAuxiliaryVerbs(problem) {
       nextMorpheme.feature == "助動詞"
     ) {
       merged = true;
-      morpheme.feature = "動詞";
-      morpheme.surface += nextMorpheme.surface;
-      morpheme.reading += nextMorpheme.reading;
-      newProblem.push(morpheme);
+      const m = {
+        feature: "動詞",
+        surface: morpheme.surface + nextMorpheme.surface,
+        reading: morpheme.reading + nextMorpheme.reading,
+        featureDetails: morpheme.featureDetails,
+        conjugationForms: morpheme.conjugationForms,
+      };
+      newProblem.push(m);
     } else if (merged) {
       merged = false;
     } else {
@@ -217,12 +208,14 @@ function mergeAdjectiveVerbs(problem) {
       nextMorpheme.feature == "助動詞"
     ) {
       merged = true;
-      morpheme.feature = "形容動詞";
-      morpheme.surface += nextMorpheme.surface;
-      morpheme.reading += nextMorpheme.reading;
-      morpheme.featureDetails = ["*", "*", "*"];
-      morpheme.conjugationForms = nextMorpheme.conjugationForms;
-      newProblem.push(morpheme);
+      const m = {
+        feature: "形容動詞",
+        surface: morpheme.surface + nextMorpheme.surface,
+        reading: morpheme.surface + nextMorpheme.reading,
+        featureDetails: ["*", "*", "*"],
+        conjugationForms: nextMorpheme.conjugationForms,
+      };
+      newProblem.push(m);
     } else if (merged) {
       merged = false;
     } else {
@@ -232,9 +225,25 @@ function mergeAdjectiveVerbs(problem) {
   return newProblem;
 }
 
-function setLabelingProblem(course) {
+function setChoice(morpheme, wrapperNode) {
+  wrapperNode.className = "btn btn-light btn-lg m-1 px-2 choice";
+  const surfaceNode = document.createElement("div");
+  const html = getFuriganaHTML(morpheme);
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const spans = [...doc.body.childNodes];
+  surfaceNode.replaceChildren(...spans);
+  const posBox = new POSBox(morpheme.feature, wrapperNode);
+  wrapperNode.appendChild(surfaceNode);
+  wrapperNode.appendChild(posBox);
+}
+
+function setProblem() {
+  firstRun = false;
+  const selectNode = document.getElementById("courseOption");
+  const courseNode = selectNode.options[selectNode.selectedIndex];
+  const course = courseNode.value;
   document.getElementById("explanation").textContent = `品詞を選んでください`;
-  let problem = targetProblems[getRandomInt(0, targetProblems.length)];
+  let problem = problems[getRandomInt(0, problems.length)];
   problem = mergePOS(course, problem);
   const nextProblems = [];
   let choiceCount = 0;
@@ -252,110 +261,22 @@ function setLabelingProblem(course) {
       case "連体詞":
       case "助動詞":
       case "形容動詞":
-        if (course == "品詞分解 (小学生)") {
+        if (course == "小学生") {
           wrapperNode.className = "btn btn-light btn-lg m-1 px-2";
           wrapperNode.textContent = morpheme.surface;
         } else {
-          setLabelingChoice(morpheme, wrapperNode);
+          setChoice(morpheme, wrapperNode);
           choiceCount += 1;
         }
         break;
       default:
-        setLabelingChoice(morpheme, wrapperNode);
+        setChoice(morpheme, wrapperNode);
         choiceCount += 1;
     }
     nextProblems.push(wrapperNode);
   });
   problemCount = choiceCount;
   japanese.replaceChildren(...nextProblems);
-}
-
-function setSearchingChoice(course, morpheme, wrapperNode) {
-  wrapperNode.className = "btn btn-light btn-lg m-1 px-2 choice";
-  const surfaceNode = document.createElement("div");
-  const html = getFuriganaHTML(morpheme);
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const spans = [...doc.body.childNodes];
-  surfaceNode.replaceChildren(...spans);
-  const button = document.createElement("button");
-  button.textContent = course + "？";
-  button.className = "btn btn-sm btn-primary";
-  button.dataset.answer = morpheme.feature;
-  button.onclick = () => {
-    if (course == morpheme.feature) {
-      correctCount += 1;
-      wrapperNode.classList.add("border", "border-primary");
-      button.textContent = course;
-      playAudio("correct");
-      solvedCount += 1;
-      if (problemCount <= solvedCount) nextProblem();
-    } else {
-      incorrectCount += 1;
-      wrapperNode.classList.add("bg-danger");
-      button.textContent = morpheme.feature;
-      playAudio("incorrect");
-    }
-    button.disabled = true;
-  };
-  wrapperNode.appendChild(surfaceNode);
-  wrapperNode.appendChild(button);
-}
-
-function setSearchingProblem(course) {
-  document.getElementById("explanation").textContent =
-    `${course}を選んでください`;
-  const problem = targetProblems[getRandomInt(0, targetProblems.length)];
-  const nextProblems = [];
-  let choiceCount = 0;
-  problem.forEach((morpheme) => {
-    const wrapperNode = document.createElement("div");
-    switch (morpheme.feature) {
-      case "フィラー":
-      case "間投詞":
-      case "記号":
-        wrapperNode.className = "btn btn-light btn-lg m-1 px-2";
-        wrapperNode.textContent = morpheme.surface;
-        break;
-      default:
-        setSearchingChoice(course, morpheme, wrapperNode);
-        if (course == morpheme.feature) choiceCount += 1;
-    }
-    nextProblems.push(wrapperNode);
-  });
-  problemCount = choiceCount;
-  japanese.replaceChildren(...nextProblems);
-}
-
-function setProblemCache() {
-  const selectNode = document.getElementById("courseOption");
-  const courseNode = selectNode.options[selectNode.selectedIndex];
-  const course = courseNode.value;
-  switch (course) {
-    case "品詞分解 (小学生)":
-    case "品詞分解 (中学生)":
-    case "品詞分解 (大人)":
-      targetProblems = problems;
-      break;
-    default:
-      targetProblems = problems.filter((morphemes) => {
-        return morphemes.find((morpheme) => morpheme.feature == course);
-      });
-  }
-}
-
-function setProblem() {
-  firstRun = false;
-  const selectNode = document.getElementById("courseOption");
-  const courseNode = selectNode.options[selectNode.selectedIndex];
-  const course = courseNode.value;
-  switch (course) {
-    case "品詞分解 (小学生)":
-    case "品詞分解 (中学生)":
-    case "品詞分解 (大人)":
-      return setLabelingProblem(course);
-    default:
-      return setSearchingProblem(course);
-  }
 }
 
 function countdown() {
@@ -419,21 +340,6 @@ function scoring() {
 }
 
 function showAnswer() {
-  if (firstRun) return showSearchingAnswer("名詞");
-  const selectNode = document.getElementById("courseOption");
-  const courseNode = selectNode.options[selectNode.selectedIndex];
-  const course = courseNode.value;
-  switch (course) {
-    case "品詞分解 (小学生)":
-    case "品詞分解 (中学生)":
-    case "品詞分解 (大人)":
-      return showLabelingAnswer();
-    default:
-      return showSearchingAnswer(course);
-  }
-}
-
-function showLabelingAnswer() {
   mistaken = true;
   incorrectCount += 1;
   solvedCount += 1;
@@ -447,7 +353,9 @@ function showLabelingAnswer() {
     wrapperNode.classList.remove("border-danger");
     wrapperNode.classList.add("bg-danger", "border", "border-primary");
     const posBox = wrapperNode.querySelector("pos-box");
-    const select = posBox.shadowRoot.querySelector("select");
+    const select = posBox
+      ? posBox.shadowRoot.querySelector("select")
+      : wrapperNode.querySelector("select");
     select.disabled = true;
     const answer = select.dataset.answer;
     const option = [...select.options].find((option) => {
@@ -463,27 +371,6 @@ function showLabelingAnswer() {
       }, 5000);
     }
   }
-}
-
-function showSearchingAnswer(course) {
-  const morphemes = [...japanese.children];
-  morphemes.forEach((wrapperNode) => {
-    if (!wrapperNode.classList.contains("choice")) return false;
-    const button = wrapperNode.querySelector("button");
-    const answer = button.dataset.answer;
-    button.disabled = true;
-    button.textContent = answer;
-    if (course == answer) {
-      wrapperNode.classList.add("bg-danger");
-    } else {
-      wrapperNode.classList.remove("bg-danger");
-    }
-  });
-  answerButton.disabled = true;
-  setTimeout(() => {
-    answerButton.disabled = false;
-    nextProblem();
-  }, 5000);
 }
 
 class POSBox extends HTMLElement {
@@ -521,7 +408,6 @@ loadProblems();
 
 document.getElementById("toggleDarkMode").onclick = toggleDarkMode;
 document.getElementById("toggleBGM").onclick = toggleBGM;
-document.getElementById("courseOption").onchange = setProblemCache;
 document.getElementById("startButton").onclick = startGame;
 document.getElementById("answerButton").onclick = showAnswer;
 document.addEventListener("click", unlockAudio, {
