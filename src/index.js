@@ -14,8 +14,6 @@ let problemCount = 5;
 let correctCount = 0;
 let incorrectCount = 0;
 let mistaken = false;
-let firstRun = true;
-let targetProblems = [];
 let problems = [];
 const audioContext = new AudioContext();
 const audioBufferCache = {};
@@ -280,6 +278,7 @@ function setProblem() {
 }
 
 function countdown() {
+  mistaken = false;
   correctCount = incorrectCount = 0;
   countPanel.classList.remove("d-none");
   infoPanel.classList.add("d-none");
@@ -308,7 +307,6 @@ function countdown() {
 }
 
 function startGame() {
-  clearInterval(gameTimer);
   initTime();
   countdown();
 }
@@ -335,8 +333,9 @@ function initTime() {
 }
 
 function scoring() {
+  const totalCount = correctCount + incorrectCount + mistaken;
   document.getElementById("score").textContent = correctCount;
-  document.getElementById("count").textContent = correctCount + incorrectCount;
+  document.getElementById("count").textContent = totalCount;
 }
 
 function showAnswer() {
