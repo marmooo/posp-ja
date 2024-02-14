@@ -384,7 +384,7 @@ class POSBox extends HTMLElement {
         wrapperNode.classList.remove("border-danger");
         wrapperNode.classList.add("border", "border-primary");
         select.disabled = true;
-        playAudio("correct");
+        playAudio("correct", 0.3);
         if (mistaken) {
           incorrectCount += 1;
         } else {
@@ -395,7 +395,7 @@ class POSBox extends HTMLElement {
       } else {
         mistaken = true;
         wrapperNode.classList.add("border", "border-danger");
-        playAudio("incorrect");
+        playAudio("incorrect", 0.3);
       }
     };
     this.attachShadow({ mode: "open" }).appendChild(template);
