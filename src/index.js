@@ -429,6 +429,7 @@ loadProblems();
 document.getElementById("toggleDarkMode").onclick = toggleDarkMode;
 document.getElementById("toggleBGM").onclick = toggleBGM;
 document.getElementById("startButton").onclick = startGame;
+document.getElementById("restartButton").onclick = startGame;
 document.getElementById("answerButton").onclick = showAnswer;
 document.addEventListener("pointerdown", unlockAudio, { once: true });
 document.addEventListener("keydown", unlockAudio, { once: true });
