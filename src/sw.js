@@ -1,4 +1,4 @@
-const CACHE_NAME = "2024-12-27 19:00";
+const CACHE_NAME = "2025-01-22 10:00";
 const urlsToCache = [
   "/posp-ja/",
   "/posp-ja/index.js",

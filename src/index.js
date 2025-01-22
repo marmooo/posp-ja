@@ -125,7 +125,7 @@ function getRandomInt(min, max) {
 }
 
 function kanaToHira(str) {
-  return str.replace(/[\u30a1-\u30f6]/g, (match) => {
+  return str.replace(/[ァ-ヶ]/g, (match) => {
     const chr = match.charCodeAt(0) - 0x60;
     return String.fromCharCode(chr);
   });
