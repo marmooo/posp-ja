@@ -1,4 +1,4 @@
-import { $ } from "npm:zx@8.1.9";
+import { $ } from "npm:zx@8.5.2-lite";
 
 function kanaToHira(str) {
   return str.replace(/[ァ-ヶ]/g, (match) => {
